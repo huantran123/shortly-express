@@ -77,12 +77,43 @@ app.post('/links',
 // Write your authentication routes here
 /************************************************************/
 app.post('/signup',
-  (req, res, next) => {});
-
+  (req, res, next) => {
+    let {username, password} = req.body;
+    return models.Users.get({username})
+      .then((result) => {
+        if (result === undefined) {
+          return models.Users.create({username, password});
+        } else {
+          res.redirect('/signup');
+        }
+      })
+      .then(() => {
+        res.redirect('/');
+      });
+  });
 
 
 app.post('/login',
-  (req, res, next) => {});
+  (req, res, next) => {
+    let {username, password} = req.body;
+    return models.Users.get({username})
+      .then((result) => {
+        if (result === undefined) {
+          res.redirect('/login');
+        } else {
+          let hashPassword = result.password;
+          let salt = result.salt;
+          return models.Users.compare(password, hashPassword, salt);
+        }
+      })
+      .then((result) => {
+        if (result === true) {
+          res.redirect('/');
+        } else {
+          res.redirect('/login');
+        }
+      });
+  });
 
 
 
