@@ -44,11 +44,7 @@ class Users extends Model {
 
     return super.create.call(this, newUser);
   }
-  
-  getUser({ username }) {
-    return Model.get({ username });
-  }
-  
+
 }
 
 
