@@ -11,7 +11,7 @@ var sessionHelper = (req, res, next) => {
     })
     .then(result => {
       req.session = result;
-      res.cookie('shortlyid', {value: result.hash});
+      res.cookie('shortlyid', result.hash);
       next();
     })
     .catch(err => {
@@ -22,7 +22,7 @@ var sessionHelper = (req, res, next) => {
 
 module.exports.createSession = (req, res, next) => {
   let reqCookies = req.cookies;
-  if (JSON.stringify(reqCookies) === '{}') {
+  if (Object.keys(reqCookies).length === 0) {
     sessionHelper(req, res, next);
   } else {
     let oldHash = reqCookies.shortlyid.value || reqCookies.shortlyid;
@@ -32,7 +32,7 @@ module.exports.createSession = (req, res, next) => {
           return sessionHelper(req, res, next);
         } else {
           req.session = result;
-          res.cookie('shortlyid', {value: result.hash});
+          res.cookie('shortlyid', result.hash);
           next();
         }
       });
@@ -41,7 +41,16 @@ module.exports.createSession = (req, res, next) => {
 
 
 
+
 /************************************************************/
 // Add additional authentication middleware functions below
 /************************************************************/
+module.exports.verifySession = (req, res, next) => {
+  if (!models.Sessions.isLoggedIn(req.session)) {
+    res.redirect('/login');
+  } else {
+    next();
+  }
+
+};
 

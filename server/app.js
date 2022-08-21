@@ -18,17 +18,17 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use(cookieParser);
 app.use(Auth.createSession);
 
-app.get('/',
+app.get('/', Auth.verifySession,
   (req, res) => {
     res.render('index');
   });
 
-app.get('/create',
+app.get('/create', Auth.verifySession,
   (req, res) => {
     res.render('index');
   });
 
-app.get('/links',
+app.get('/links', Auth.verifySession,
   (req, res, next) => {
     models.Links.getAll()
       .then(links => {
@@ -39,7 +39,7 @@ app.get('/links',
       });
   });
 
-app.post('/links',
+app.post('/links', Auth.verifySession,
   (req, res, next) => {
     var url = req.body.url;
     if (!models.Links.isValidUrl(url)) {
@@ -78,10 +78,15 @@ app.post('/links',
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
+app.get('/signup',
+  (req, res) => {
+    res.render('signup');
+  });
+
 app.post('/signup',
-  (req, res, next) => {
+  (req, res) => {
     let {username, password} = req.body;
-    return models.Users.get({username})
+    models.Users.get({username})
       .then((result) => {
         if (result === undefined) {
           return models.Users.create({username, password});
@@ -89,31 +94,49 @@ app.post('/signup',
           res.redirect('/signup');
         }
       })
-      .then(() => {
+      .then((result) => {
+        models.Sessions.update({hash: req.session.hash}, {userId: result.insertId});
         res.redirect('/');
       });
   });
 
 
+
+app.get('/login',
+  (req, res) => {
+    res.render('login');
+  });
+
 app.post('/login',
-  (req, res, next) => {
+  (req, res) => {
     let {username, password} = req.body;
-    return models.Users.get({username})
+    models.Users.get({username})
       .then((result) => {
         if (result === undefined) {
           res.redirect('/login');
         } else {
           let hashPassword = result.password;
           let salt = result.salt;
-          return models.Users.compare(password, hashPassword, salt);
+          if (models.Users.compare(password, hashPassword, salt)) {
+            models.Sessions.update({hash: req.session.hash}, {userId: result.id});
+            res.redirect('/');
+          } else {
+            res.redirect('/login');
+          }
         }
-      })
+      });
+  });
+
+app.get('/logout',
+  (req, res) => {
+    models.Sessions.get({hash: req.session.hash})
       .then((result) => {
-        if (result === true) {
-          res.redirect('/');
-        } else {
-          res.redirect('/login');
-        }
+        req.headers.cookie = {};
+        req.cookies = {};
+        return models.Sessions.delete({hash: result.hash});
+      })
+      .then(() => {
+        res.redirect('/');
       });
   });
 
